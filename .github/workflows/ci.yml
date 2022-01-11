@@ -1,0 +1,44 @@
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  CI:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    #- name: apt-get any needed packages
+    #  if: "contains(matrix.os, 'ubuntu')"
+    #  run: |
+    #    sudo apt-get update
+    #    sudo apt-get install -y build-essential git cmake
+
+    - name: Print versions
+      run: |
+        cmake --version
+
+    - uses: actions/checkout@v2
+      # If we want submodules downloaded, uncomment the next 2 lines:
+      #with:
+      #  submodules: true
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake ..
+
+    - name: Build C++ unit tests
+      run: |
+        cd build
+        make -j
+
+    - name: Run C++ unit tests
+      run: |
+        cd build
+        ./tests
