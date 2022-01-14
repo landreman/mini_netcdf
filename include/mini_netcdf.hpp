@@ -32,6 +32,10 @@ namespace mini_netcdf {
     return (temp[0] << 24) | (temp[1] << 16) | (temp[2] << 8) | temp[3];
   }
   
+  inline int32_t big_endian_to_native(char* temp) {
+    return (temp[0] << 24) | (temp[1] << 16) | (temp[2] << 8) | temp[3];
+  }
+  
   inline int32_t native_to_big_endian(int32_t oldnum) {
     int32_t newnum;
     char * temp = reinterpret_cast<char *>(&newnum);
@@ -43,6 +47,12 @@ namespace mini_netcdf {
   }
   
   void hw();
+
+  const int32_t STREAMING    = 0xFFFFFF;
+  const int32_t ZERO         = 0x000000;
+  const int32_t NC_DIMENSION = 0x00000A;
+  const int32_t NC_VARIABLE  = 0x00000B;
+  const int32_t NC_ATTRIBUTE = 0x00000C;
   
   class NetcdfReader {
   public:

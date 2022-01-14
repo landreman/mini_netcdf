@@ -51,8 +51,9 @@ NetcdfReader::NetcdfReader(std::string filename) {
     }
   }
   if (cdf[0] != 'C' || cdf[1] != 'D' || cdf[2] != 'F')
-    throw std::runtime_error("File does not begin with CDF. Probably not a NetCDF file.");
-  
+    throw std::runtime_error("File does not begin with CDF. Probably not a NetCDF classic file.");
+
+  // Handle version byte
   char offset_byte;
   file.read(&offset_byte, 1);
   if (debug) std::cout << "Offset byte: " << (int) offset_byte << std::endl;
@@ -64,6 +65,33 @@ NetcdfReader::NetcdfReader(std::string filename) {
     offset64 = true;
   } else {
     throw std::runtime_error("Version bit is not 1 or 2. Not supported.");
+  }
+
+  // Handle numrecs
+  char numrecs_raw[4];
+  bool is_streaming;
+  file.read(numrecs_raw, 4);
+  int32_t numrecs = big_endian_to_native(numrecs_raw);
+  is_streaming = (numrecs == STREAMING);
+  if (debug) {
+    if (is_streaming)
+      std::cout << "numrecs is STREAMING" << std::endl;
+    else
+      std::cout << "numrecs is " << numrecs << std::endl;
+  }
+
+  // Handle dim_list size
+  char dim_list_1_raw[4], dim_list_2_raw[4];
+  file.read(dim_list_1_raw, 4);
+  file.read(dim_list_2_raw, 4);
+  int32_t dim_list_1 = big_endian_to_native(dim_list_1_raw);
+  int32_t ndims = big_endian_to_native(dim_list_2_raw);
+  if (debug)
+    std::cout << "dim_list_1: " << dim_list_1 << "  ndims: " << ndims << std::endl;
+  if (dim_list_1 == ZERO) {
+    assert (ndims == 0);
+  } else if (dim_list_1 != NC_DIMENSION) {
+    throw std::runtime_error("dim_list is neither ABSENT nor NC_DIMENSION");
   }
   
   file.close();
