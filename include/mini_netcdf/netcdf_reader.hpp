@@ -4,6 +4,7 @@
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
+#include <cassert>
 
 using namespace mini_netcdf;
 
