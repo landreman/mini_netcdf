@@ -18,11 +18,9 @@ include_directories(include)
 include_directories(external/doctest)
 
 # Get a list of all sources:
-file(GLOB SOURCES src/*.cpp)
 file(GLOB TEST_SOURCES tests/*.cpp)
-message("Sources: ${SOURCES}")
 message("Test sources: ${TEST_SOURCES}")
-add_executable(${EXECUTABLE} ${SOURCES} ${TEST_SOURCES})
+add_executable(${EXECUTABLE} ${TEST_SOURCES})
 
 # We need the c++11 standard for doctest
 set_property(TARGET ${EXECUTABLE} PROPERTY CXX_STANDARD 11)

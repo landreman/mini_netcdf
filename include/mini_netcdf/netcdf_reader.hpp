@@ -1,11 +1,13 @@
-#include "mini_netcdf.hpp"
+#ifndef MINI_NETCDF_NETCDF_READER
+#define MINI_NETCDF_NETCDF_READER
+
 #include <iostream>
 #include <fstream>
 #include <stdexcept>
 
 using namespace mini_netcdf;
 
-void mini_netcdf::hw() {
+inline void mini_netcdf::hw() {
   std::cout << "Hello world!" << std::endl;
   int32_t test = 1;
   
@@ -23,7 +25,7 @@ void mini_netcdf::hw() {
   std::cout << "native_to_big_endian(1): " << native_to_big_endian(1) << std::endl;
 } 
 
-NetcdfReader::NetcdfReader(std::string filename) {
+inline NetcdfReader::NetcdfReader(std::string filename) {
   if (debug) std::cout << "Opening file " << filename << std::endl;
   std::ifstream file(filename, std::ios::binary);
   if (!file)
@@ -96,3 +98,5 @@ NetcdfReader::NetcdfReader(std::string filename) {
   
   file.close();
 }
+
+#endif
