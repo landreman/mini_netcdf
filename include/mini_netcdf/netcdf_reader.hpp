@@ -2,7 +2,6 @@
 #define MINI_NETCDF_NETCDF_READER
 
 #include <iostream>
-#include <fstream>
 #include <stdexcept>
 #include <cassert>
 
@@ -26,9 +25,38 @@ inline void mini_netcdf::hw() {
   std::cout << "native_to_big_endian(1): " << native_to_big_endian(1) << std::endl;
 } 
 
+/**
+ * Read an integer from the netcdf file.
+ */
+inline int32_t NetcdfReader::unpack_int() {
+  char char4[4];
+  file.read(char4, 4);
+  return big_endian_to_native(char4);
+}
+
+/**
+ * Read a string from the netcdf file. Before reading the string
+ * itself, the length of the string is also read.
+ */
+inline std::string NetcdfReader::unpack_string() {
+    int32_t length = unpack_int();
+
+    char * binary_string = new char[length];
+    file.read(binary_string, length);
+
+    // Handle padding
+    int npad = ((-length) % 4 + 4) % 4;
+    char buffer[npad];
+    file.read(buffer, npad);
+
+    return std::string(binary_string, length);
+}
+
 inline NetcdfReader::NetcdfReader(std::string filename) {
+  int j;
+  
   if (debug) std::cout << "Opening file " << filename << std::endl;
-  std::ifstream file(filename, std::ios::binary);
+  file = std::ifstream(filename, std::ios::binary);
   if (!file)
     throw std::runtime_error("Unable to open NetCDF file");
   
@@ -61,7 +89,6 @@ inline NetcdfReader::NetcdfReader(std::string filename) {
   file.read(&offset_byte, 1);
   if (debug) std::cout << "Offset byte: " << (int) offset_byte << std::endl;
   int offset_int = offset_byte;
-  bool offset64;
   if (offset_int == 1) {
     offset64 = false;
   } else if (offset_int == 2) {
@@ -71,10 +98,7 @@ inline NetcdfReader::NetcdfReader(std::string filename) {
   }
 
   // Handle numrecs
-  char numrecs_raw[4];
-  bool is_streaming;
-  file.read(numrecs_raw, 4);
-  int32_t numrecs = big_endian_to_native(numrecs_raw);
+  numrecs = unpack_int();
   is_streaming = (numrecs == STREAMING);
   if (debug) {
     if (is_streaming)
@@ -84,17 +108,27 @@ inline NetcdfReader::NetcdfReader(std::string filename) {
   }
 
   // Handle dim_list size
-  char dim_list_1_raw[4], dim_list_2_raw[4];
-  file.read(dim_list_1_raw, 4);
-  file.read(dim_list_2_raw, 4);
-  int32_t dim_list_1 = big_endian_to_native(dim_list_1_raw);
-  int32_t ndims = big_endian_to_native(dim_list_2_raw);
+  int32_t dim_list_1 = unpack_int();
+  ndims = unpack_int();
   if (debug)
     std::cout << "dim_list_1: " << dim_list_1 << "  ndims: " << ndims << std::endl;
   if (dim_list_1 == ZERO) {
     assert (ndims == 0);
   } else if (dim_list_1 != NC_DIMENSION) {
     throw std::runtime_error("dim_list is neither ABSENT nor NC_DIMENSION");
+  }
+
+  dim_names.resize(ndims);
+  dims.resize(ndims);
+  
+  for (j = 0; j < ndims; j++) {
+    dim_names[j] = unpack_string();
+    dims[j] = unpack_int();
+
+    if (debug) std::cout << "Read dimension. name length: " << dim_names[j].size()
+			 << " name: " << dim_names[j]
+			 << " length: " << dims[j] << std::endl;
+
   }
   
   file.close();

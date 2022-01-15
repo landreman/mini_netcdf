@@ -3,6 +3,8 @@
 
 #include <string>
 #include <cstdint>
+#include <vector>
+#include <fstream>
 
 #define debug true
 
@@ -55,8 +57,23 @@ namespace mini_netcdf {
   const int32_t NC_ATTRIBUTE = 0x00000C;
   
   class NetcdfReader {
+  private:
+    bool is_streaming;
+    bool offset64;
+    int32_t numrecs;
+    int32_t ndims;
+    std::vector<int32_t> dims;
+    std::vector<std::string> dim_names;
+    std::ifstream file;
+
+    int32_t unpack_int();
+    std::string unpack_string();
+    
   public:
     NetcdfReader(std::string filename);
+    int32_t get_ndims() {return ndims;};
+    std::vector<int32_t> get_dims() {return dims;};
+    std::vector<std::string> get_dim_names() {return dim_names;};
   };
 
 }
