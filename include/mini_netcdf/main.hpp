@@ -48,22 +48,49 @@ namespace mini_netcdf {
     return newnum;
   }
   
-  void hw();
-
   const int32_t STREAMING    = 0xFFFFFF;
   const int32_t ZERO         = 0x000000;
   const int32_t NC_DIMENSION = 0x00000A;
   const int32_t NC_VARIABLE  = 0x00000B;
   const int32_t NC_ATTRIBUTE = 0x00000C;
+  const int32_t NC_BYTE      = 0x000001;
+  const int32_t NC_CHAR      = 0x000002;
+  const int32_t NC_SHORT     = 0x000003;
+  const int32_t NC_INT       = 0x000004;
+  const int32_t NC_FLOAT     = 0x000005;
+  const int32_t NC_DOUBLE    = 0x000006;
+
+  struct NetcdfDimension {
+    std::string name;
+    int32_t size;
+  };
+  
+  struct NetcdfAttribute {
+    std::string name;
+    int32_t type;
+    // Eventually, 'value' will need to allow for other types.
+    std::string value;
+  };
+  
+  struct NetcdfVariable {
+    std::string name;
+    std::vector<int> dim_ids;
+    std::vector<NetcdfAttribute> attributes;
+    int32_t type;
+    int32_t vsize;
+    int64_t begin;
+  };
   
   class NetcdfReader {
   private:
     bool is_streaming;
     bool offset64;
     int32_t numrecs;
-    int32_t ndims;
-    std::vector<int32_t> dims;
-    std::vector<std::string> dim_names;
+    int32_t n_dimensions;
+    int32_t n_global_attributes;
+    int32_t n_variables;
+    std::vector<NetcdfDimension> dimensions;
+    std::vector<NetcdfVariable> variables;
     std::ifstream file;
 
     int32_t unpack_int();
@@ -71,9 +98,10 @@ namespace mini_netcdf {
     
   public:
     NetcdfReader(std::string filename);
-    int32_t get_ndims() {return ndims;};
-    std::vector<int32_t> get_dims() {return dims;};
-    std::vector<std::string> get_dim_names() {return dim_names;};
+    int32_t get_n_dimensions() {return dimensions.size();};
+    std::vector<NetcdfDimension> get_dimensions() {return dimensions;};
+    int32_t get_n_variables() {return variables.size();};
+    std::vector<NetcdfVariable> get_variables() {return variables;};
   };
 
 }

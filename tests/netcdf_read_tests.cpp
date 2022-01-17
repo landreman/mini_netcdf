@@ -4,14 +4,15 @@
 using doctest::Approx;
 using namespace mini_netcdf;
 
-TEST_CASE("hw") {
-  hw();
-  CHECK(1 == 1);
-
+TEST_CASE("Try reading a netcdf file") {
+  
   NetcdfReader nr("wout_circular_tokamak.nc");
-  CHECK(nr.get_ndims() == 11);
-  CHECK(nr.get_dims()[0] == 100);
-  CHECK(nr.get_dim_names()[0] == "dim_00100");
-  CHECK(nr.get_dims()[9] == 17);
-  CHECK(nr.get_dim_names()[9] == "radius");
+  
+  // Check that the dimensions were read correctly:
+  CHECK(nr.get_n_dimensions() == 11);
+  CHECK(nr.get_dimensions()[0].size == 100);
+  CHECK(nr.get_dimensions()[0].name == "dim_00100");
+  CHECK(nr.get_dimensions()[9].size == 17);
+  CHECK(nr.get_dimensions()[9].name == "radius");
+  CHECK(nr.get_n_variables() == 104);
 }

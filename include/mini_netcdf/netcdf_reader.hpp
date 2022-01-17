@@ -4,26 +4,9 @@
 #include <iostream>
 #include <stdexcept>
 #include <cassert>
+#include "mini_netcdf.hpp"
 
 using namespace mini_netcdf;
-
-inline void mini_netcdf::hw() {
-  std::cout << "Hello world!" << std::endl;
-  int32_t test = 1;
-  
-  union {
-    int32_t i;
-    char c[4];
-  } e;
-  e.i = 1;
-  std::cout << "c[0]: " << (int)e.c[0] << "  c[3]: " << (int)e.c[3] << std::endl;
-  
-  std::cout << "is_big_endian_cast: " << is_big_endian_cast() << std::endl;
-  std::cout << "is_big_endian_union: " << is_big_endian_union() << std::endl;
-  std::cout << "IS_BIG_ENDIAN_DEFINE: " << IS_BIG_ENDIAN_DEFINE << std::endl;
-  std::cout << "big_endian_to_native(1): " << big_endian_to_native(1) << std::endl;
-  std::cout << "native_to_big_endian(1): " << native_to_big_endian(1) << std::endl;
-} 
 
 /**
  * Read an integer from the netcdf file.
@@ -52,6 +35,10 @@ inline std::string NetcdfReader::unpack_string() {
     return std::string(binary_string, length);
 }
 
+/**
+ * Constructor. This constructor does all the work of actually reading
+ * in the file.
+ */
 inline NetcdfReader::NetcdfReader(std::string filename) {
   int j;
   
@@ -109,26 +96,58 @@ inline NetcdfReader::NetcdfReader(std::string filename) {
 
   // Handle dim_list size
   int32_t dim_list_1 = unpack_int();
-  ndims = unpack_int();
+  n_dimensions = unpack_int();
   if (debug)
-    std::cout << "dim_list_1: " << dim_list_1 << "  ndims: " << ndims << std::endl;
+    std::cout << "dim_list_1: " << dim_list_1 << "  n_dimensions: " << n_dimensions << std::endl;
   if (dim_list_1 == ZERO) {
-    assert (ndims == 0);
+    assert (n_dimensions == 0);
   } else if (dim_list_1 != NC_DIMENSION) {
     throw std::runtime_error("dim_list is neither ABSENT nor NC_DIMENSION");
   }
 
-  dim_names.resize(ndims);
-  dims.resize(ndims);
+  dimensions.resize(n_dimensions);
+
+  // Read in the dimension names and sizes.
+  for (j = 0; j < n_dimensions; j++) {
+    dimensions[j].name = unpack_string();
+    dimensions[j].size = unpack_int();
+
+    if (debug) std::cout << "Read dimension. name length: " << dimensions[j].name.size()
+			 << ". name: " << dimensions[j].name
+			 << ". size: " << dimensions[j].size << std::endl;
+  }
+
+  // See if there are global attributes
+  int32_t global_attributes_1 = unpack_int();
+  n_global_attributes = unpack_int();
+    std::cout << "global_attributes_1: " << global_attributes_1
+	      << "  n_global_attributes: " << n_global_attributes << std::endl;
+  if (global_attributes_1 == ZERO) {
+    assert (n_global_attributes == 0);
+  } else if (global_attributes_1 != NC_ATTRIBUTE) {
+    throw std::runtime_error("First int of gatt_list is neither ABSENT nor NC_ATTRIBUTE");
+  }
+
+  if (n_global_attributes > 0)
+    throw std::runtime_error("Reading of global attributes is not yet implemented.");
+
+  // Get the number of variables
+  int32_t variables_1 = unpack_int();
+  n_variables = unpack_int();
+    std::cout << "variables_1: " << variables_1
+	      << "  n_variables: " << n_variables << std::endl;
+  if (variables_1 == ZERO) {
+    assert (n_variables == 0);
+  } else if (variables_1 != NC_VARIABLE) {
+    throw std::runtime_error("First int of var_list is neither ABSENT nor NC_VARIABLE");
+  }
+
+  variables.resize(n_variables);
   
-  for (j = 0; j < ndims; j++) {
-    dim_names[j] = unpack_string();
-    dims[j] = unpack_int();
-
-    if (debug) std::cout << "Read dimension. name length: " << dim_names[j].size()
-			 << " name: " << dim_names[j]
-			 << " length: " << dims[j] << std::endl;
-
+  // Read variables
+  for (j = 0; j < 1; j++) {
+    variables[j].name = unpack_string();
+    if (debug) std::cout << "Read variable " << variables[j].name << std::endl;
   }
   
   file.close();
