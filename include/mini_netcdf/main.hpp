@@ -4,6 +4,7 @@
 #include <string>
 #include <cstdint>
 #include <vector>
+#include <cassert>
 #include <fstream>
 
 #define debug true
@@ -34,8 +35,19 @@ namespace mini_netcdf {
     return (temp[0] << 24) | (temp[1] << 16) | (temp[2] << 8) | temp[3];
   }
   
-  inline int32_t big_endian_to_native(char* temp) {
+  inline int32_t big_endian_to_native_32(char* temp) {
     return (temp[0] << 24) | (temp[1] << 16) | (temp[2] << 8) | temp[3];
+  }
+  
+  inline int64_t big_endian_to_native_64(char* temp) {
+    return (static_cast<int64_t>(temp[0]) << 56)
+      | (static_cast<int64_t>(temp[1]) << 48)
+      | (static_cast<int64_t>(temp[2]) << 40)
+      | (static_cast<int64_t>(temp[3]) << 32)
+      | (static_cast<int64_t>(temp[4]) << 24)
+      | (static_cast<int64_t>(temp[5]) << 16)
+      | (static_cast<int64_t>(temp[6]) << 8)
+      | static_cast<int64_t>(temp[7]);
   }
   
   inline int32_t native_to_big_endian(int32_t oldnum) {
@@ -60,6 +72,31 @@ namespace mini_netcdf {
   const int32_t NC_FLOAT     = 0x000005;
   const int32_t NC_DOUBLE    = 0x000006;
 
+  inline std::string type_str(int32_t t) {
+    switch (t) {
+    case NC_BYTE:
+      return "byte";
+      break;
+    case NC_CHAR:
+      return "char";
+      break;
+    case NC_SHORT:
+      return "short";
+      break;
+    case NC_INT:
+      return "int";
+      break;
+    case NC_FLOAT:
+      return "float";
+      break;
+    case NC_DOUBLE:
+      return "double";
+      break;
+    default:
+      throw std::runtime_error("Invalid type");
+    }
+  }
+  
   struct NetcdfDimension {
     std::string name;
     int32_t size;
@@ -74,6 +111,7 @@ namespace mini_netcdf {
   
   struct NetcdfVariable {
     std::string name;
+    int32_t rank;
     std::vector<int> dim_ids;
     std::vector<NetcdfAttribute> attributes;
     int32_t type;
@@ -94,6 +132,7 @@ namespace mini_netcdf {
     std::ifstream file;
 
     int32_t unpack_int();
+    int64_t unpack_int64();
     std::string unpack_string();
     
   public:

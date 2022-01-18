@@ -14,7 +14,16 @@ using namespace mini_netcdf;
 inline int32_t NetcdfReader::unpack_int() {
   char char4[4];
   file.read(char4, 4);
-  return big_endian_to_native(char4);
+  return big_endian_to_native_32(char4);
+}
+
+/**
+ * Read a 64-bit integer from the netcdf file.
+ */
+inline int64_t NetcdfReader::unpack_int64() {
+  char char8[8];
+  file.read(char8, 8);
+  return big_endian_to_native_64(char8);
 }
 
 /**
@@ -40,7 +49,7 @@ inline std::string NetcdfReader::unpack_string() {
  * in the file.
  */
 inline NetcdfReader::NetcdfReader(std::string filename) {
-  int j;
+  int j, k;
   
   if (debug) std::cout << "Opening file " << filename << std::endl;
   file = std::ifstream(filename, std::ios::binary);
@@ -120,8 +129,8 @@ inline NetcdfReader::NetcdfReader(std::string filename) {
   // See if there are global attributes
   int32_t global_attributes_1 = unpack_int();
   n_global_attributes = unpack_int();
-    std::cout << "global_attributes_1: " << global_attributes_1
-	      << "  n_global_attributes: " << n_global_attributes << std::endl;
+  if (debug) std::cout << "global_attributes_1: " << global_attributes_1
+		       << "  n_global_attributes: " << n_global_attributes << std::endl;
   if (global_attributes_1 == ZERO) {
     assert (n_global_attributes == 0);
   } else if (global_attributes_1 != NC_ATTRIBUTE) {
@@ -134,8 +143,8 @@ inline NetcdfReader::NetcdfReader(std::string filename) {
   // Get the number of variables
   int32_t variables_1 = unpack_int();
   n_variables = unpack_int();
-    std::cout << "variables_1: " << variables_1
-	      << "  n_variables: " << n_variables << std::endl;
+  if (debug) std::cout << "variables_1: " << variables_1
+		       << "  n_variables: " << n_variables << std::endl;
   if (variables_1 == ZERO) {
     assert (n_variables == 0);
   } else if (variables_1 != NC_VARIABLE) {
@@ -145,9 +154,52 @@ inline NetcdfReader::NetcdfReader(std::string filename) {
   variables.resize(n_variables);
   
   // Read variables
-  for (j = 0; j < 1; j++) {
+  int32_t attributes_1, n_attributes;
+  for (j = 0; j < n_variables; j++) {
     variables[j].name = unpack_string();
-    if (debug) std::cout << "Read variable " << variables[j].name << std::endl;
+    variables[j].rank = unpack_int();
+    if (debug) std::cout << "Reading variable " << variables[j].name << "  rank: " << variables[j].rank << std::endl;
+    variables[j].dim_ids.resize(variables[j].rank);
+    for (k = 0; k < variables[j].rank; k++) {
+      variables[j].dim_ids[k] = unpack_int();
+      if (debug) std::cout << "  dim id: " << variables[j].dim_ids[k];
+    }
+    if (debug && variables[j].rank > 0) std::cout << std::endl;
+    
+    // Get the number of attributes associated with this variable.
+    attributes_1 = unpack_int();
+    n_attributes = unpack_int();
+    if (debug) std::cout << "  attributes_1: " << attributes_1 << "  n_attributes: " << n_attributes << std::endl;
+    if (attributes_1 == ZERO) {
+      assert (n_attributes == 0);
+    } else if (attributes_1 != NC_ATTRIBUTE) {
+      throw std::runtime_error("First int of att_list is neither ABSENT nor NC_ATTRIBUTE");
+    }
+
+    // Read attributes
+    variables[j].attributes.resize(n_attributes);
+    for (k = 0; k < n_attributes; k++) {
+      variables[j].attributes[k].name = unpack_string();
+      variables[j].attributes[k].type = unpack_int();
+      if (variables[j].attributes[k].type != NC_CHAR)
+	throw std::runtime_error("For now only string attributes are supported.");
+      variables[j].attributes[k].value = unpack_string();
+      if (debug) std::cout << "  attribute " << variables[j].attributes[k].name
+			   << "  type: " << type_str(variables[j].attributes[k].type)
+			   << "  value: " << variables[j].attributes[k].value << std::endl;
+    }
+
+    // Read other properties of the variables
+    variables[j].type = unpack_int();
+    variables[j].vsize = unpack_int();
+    if (offset64) {
+      variables[j].begin = unpack_int64();
+    } else {
+      variables[j].begin = unpack_int();
+    }
+    if (debug) std::cout << "  type: " << type_str(variables[j].type)
+			 << "  vsize: " << variables[j].vsize
+			 << "  begin: " << variables[j].begin << std::endl;
   }
   
   file.close();
